@@ -21,7 +21,7 @@ public:
 
   //MatrixCRS
   void transposition(MatrixCRS& matrix, MatrixCRS& matrixT);
-  double* vectorMult(MatrixCRS& matrix, double* vector);
-  double** mult(MatrixCRS& m1, MatrixCRS& m2);
-  MatrixCRS multM(MatrixCRS& m1, MatrixCRS& m2);
+  void vectorMult(MatrixCRS& matrix, double* multV, double* resV);
+  void mult(MatrixCRS& m1, MatrixCRS& m2, double** denseM);
+  void mult(MatrixCRS& m1, MatrixCRS& m2,MatrixCRS res);
 };
