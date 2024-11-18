@@ -133,6 +133,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Calc.cpp" />
+    <ClCompile Include="GenerateCRS.cpp" />
+    <ClCompile Include="GenerateCRS.h" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MatrixCOO.cpp" />
     <ClCompile Include="MatrixCRS.cpp" />
