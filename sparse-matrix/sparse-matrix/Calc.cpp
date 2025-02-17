@@ -141,9 +141,17 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double** denseM)
   }
 }
 
-/*
-void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS res)
+
+//
+void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 {
+  vector<double> val;
+  vector<int> col;
+  int* rowIndex = new int[m2.getMatrixSize() + 1];
+  rowIndex[0] = 0;
+
+  double* iteration_res = new double[m2.getMatrixSize()] {0.0};
+  
   for (int i = 0; i < m1.getMatrixSize(); i++)
   {
 	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
@@ -154,9 +162,34 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS res)
 	  int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
 	  for (int k = k1; k < k2; k++)
 	  {
-		//denseM[row][m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+		iteration_res[m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
 	  }
 	}
+
+	for (int j = 0; j < m2.getMatrixSize(); j++)
+	{
+	  if (iteration_res[j] != 0.0)
+	  {
+		val.push_back(iteration_res[j]);
+		col.push_back(j);
+	  }
+	}
+	rowIndex[i + 1] = col.size();
+	//memset(iteration_res, 0.0, m2.getMatrixSize());
+	for (int j = 0; j < m2.getMatrixSize(); j++)
+	  iteration_res[j] = 0.0;
   }
+
+  (*res) = new MatrixCRS(m2.getMatrixSize(), val.size());
+  for (int i = 0; i < rowIndex[m2.getMatrixSize()]; i++)
+  {
+	(*res)->Values()[i] = val[i];
+	(*res)->Col()[i] = col[i];
+  }
+
+  for (int i = 0; i < m2.getMatrixSize() + 1; i++)
+	(*res)->RowIndex()[i] = rowIndex[i];
+ 
+  delete[] rowIndex;
+  delete[] iteration_res;
 }
-*/
