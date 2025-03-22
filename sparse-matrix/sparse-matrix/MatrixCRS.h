@@ -17,8 +17,8 @@ public:
   ~MatrixCRS();
   MatrixCRS& operator= (const MatrixCRS& matrix);
 
-  int getMatrixSize();
-  int getElCount();
+  int getMatrixSize() const;
+  int getElCount() const;
 
   double* Values() const;
   int* RowIndex() const;

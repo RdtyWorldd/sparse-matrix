@@ -59,12 +59,12 @@ MatrixCRS& MatrixCRS::operator=(const MatrixCRS& matrix)
   return *this;
 }
 
-int MatrixCRS::getMatrixSize()
+int MatrixCRS::getMatrixSize() const
 {
   return matrixSize;
 }
 
-int MatrixCRS::getElCount()
+int MatrixCRS::getElCount() const
 {
   return elCount;
 }

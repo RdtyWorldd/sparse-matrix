@@ -125,6 +125,7 @@ void Calc::vectorMult(MatrixCRS& matrix, double* multV, double* resV)
 
 void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double** denseM)
 {
+#pragma omp parallel for 
   for (int i = 0; i < m1.getMatrixSize(); i++)
   {
 	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
@@ -136,6 +137,25 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double** denseM)
 	  for (int k = k1; k < k2; k++)
 	  {
 		denseM[row][m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+	  }
+	}
+  }
+}
+
+void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double* denseM)
+{
+#pragma omp parallel for 
+  for (int i = 0; i < m1.getMatrixSize(); i++)
+  {
+	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
+	int row = i;
+	for (int j = j1; j < j2; j++)
+	{
+	  int col = m1.Col()[j];
+	  int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
+	  for (int k = k1; k < k2; k++)
+	  {
+		denseM[row * m1.getMatrixSize() + m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
 	  }
 	}
   }
