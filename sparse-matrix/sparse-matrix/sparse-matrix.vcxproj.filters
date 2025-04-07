@@ -24,6 +24,9 @@
     <ClInclude Include="MatrixCRS.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="Ellpack.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MatrixCOO.cpp">
@@ -42,6 +45,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClCompile>
     <ClCompile Include="GenerateCRS.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="main_spmm.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>

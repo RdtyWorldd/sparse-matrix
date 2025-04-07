@@ -133,6 +133,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Calc.h" />
+    <ClInclude Include="Ellpack.h" />
     <ClInclude Include="MatrixCOO.h" />
     <ClInclude Include="MatrixCRS.h" />
   </ItemGroup>
@@ -141,6 +142,7 @@
     <ClCompile Include="GenerateCRS.cpp" />
     <ClCompile Include="GenerateCRS.h" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="main_spmm.cpp" />
     <ClCompile Include="MatrixCOO.cpp" />
     <ClCompile Include="MatrixCRS.cpp" />
   </ItemGroup>

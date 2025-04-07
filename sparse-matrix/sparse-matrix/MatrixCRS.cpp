@@ -28,6 +28,7 @@ MatrixCRS::MatrixCRS(const MatrixCRS& matrix)
     rowIndex[i] = matrix.rowIndex[i];
 }
 
+
 MatrixCRS::~MatrixCRS()
 {
   delete[] values;

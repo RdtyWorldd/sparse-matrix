@@ -128,17 +128,17 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double** denseM)
 #pragma omp parallel for 
   for (int i = 0; i < m1.getMatrixSize(); i++)
   {
-	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
-	int row = i;
-	for (int j = j1; j < j2; j++)
-	{
-	  int col = m1.Col()[j];
-	  int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
-	  for (int k = k1; k < k2; k++)
-	  {
-		denseM[row][m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
-	  }
-	}
+		int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
+		int row = i;
+		for (int j = j1; j < j2; j++)
+		{
+			int col = m1.Col()[j];
+			int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
+			for (int k = k1; k < k2; k++)
+			{
+				denseM[row][m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+			}
+		}
   }
 }
 
@@ -147,17 +147,17 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, double* denseM)
 #pragma omp parallel for 
   for (int i = 0; i < m1.getMatrixSize(); i++)
   {
-	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
-	int row = i;
-	for (int j = j1; j < j2; j++)
-	{
-	  int col = m1.Col()[j];
-	  int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
-	  for (int k = k1; k < k2; k++)
-	  {
-		denseM[row * m1.getMatrixSize() + m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
-	  }
-	}
+		int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
+		int row = i;
+		for (int j = j1; j < j2; j++)
+		{
+			int col = m1.Col()[j];
+			int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
+			for (int k = k1; k < k2; k++)
+			{
+			denseM[row * m1.getMatrixSize() + m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+			}
+		}
   }
 }
 
@@ -170,41 +170,45 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
   int* rowIndex = new int[m2.getMatrixSize() + 1];
   rowIndex[0] = 0;
 
+  ///можно выделить сразу весь массив двумерный и потом его конвертировать в матрицу
+  ///так как для параллельной версии в люббом случае выделиться та же матрица 
+  /// и операции пушбек в вектора станут бессмысленны, случайность потоков
+   
   double* iteration_res = new double[m2.getMatrixSize()] {0.0};
   
   for (int i = 0; i < m1.getMatrixSize(); i++)
   {
-	int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
-	int row = i;
-	for (int j = j1; j < j2; j++)
-	{
-	  int col = m1.Col()[j];
-	  int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
-	  for (int k = k1; k < k2; k++)
-	  {
-		iteration_res[m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
-	  }
-	}
+		int j1 = m1.RowIndex()[i]; int j2 = m1.RowIndex()[i + 1];
+		int row = i;
+		for (int j = j1; j < j2; j++)
+		{
+			int col = m1.Col()[j];
+			int k1 = m2.RowIndex()[col]; int k2 = m2.RowIndex()[col + 1];
+			for (int k = k1; k < k2; k++)
+			{
+				iteration_res[m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+			}
+		}
 
-	for (int j = 0; j < m2.getMatrixSize(); j++)
-	{
-	  if (iteration_res[j] != 0.0)
-	  {
-		val.push_back(iteration_res[j]);
-		col.push_back(j);
-	  }
-	}
-	rowIndex[i + 1] = col.size();
-	//memset(iteration_res, 0.0, m2.getMatrixSize());
-	for (int j = 0; j < m2.getMatrixSize(); j++)
-	  iteration_res[j] = 0.0;
+		for (int j = 0; j < m2.getMatrixSize(); j++)
+		{
+			if (iteration_res[j] != 0.0)
+			{
+				val.push_back(iteration_res[j]);
+				col.push_back(j);
+			}
+		}
+		rowIndex[i + 1] = col.size();
+		//memset(iteration_res, 0.0, m2.getMatrixSize());
+		for (int j = 0; j < m2.getMatrixSize(); j++)
+			iteration_res[j] = 0.0;
   }
 
   (*res) = new MatrixCRS(m2.getMatrixSize(), val.size());
   for (int i = 0; i < rowIndex[m2.getMatrixSize()]; i++)
   {
-	(*res)->Values()[i] = val[i];
-	(*res)->Col()[i] = col[i];
+		(*res)->Values()[i] = val[i];
+		(*res)->Col()[i] = col[i];
   }
 
   for (int i = 0; i < m2.getMatrixSize() + 1; i++)
@@ -213,3 +217,143 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
   delete[] rowIndex;
   delete[] iteration_res;
 }
+
+void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
+{
+	int num_threads = omp_get_max_threads();
+
+	int** xb = new int* [num_threads];
+	double** x = new double* [num_threads];
+
+	for (int i = 0; i < num_threads; i++)
+	{
+		xb[i] = new int[m2.getMatrixSize()];
+		x[i] = new double[m2.getMatrixSize()] {0.0};
+	}
+	for (int i = 0; i < num_threads; i++)
+	{
+		for (int j = 0; j < m2.getMatrixSize(); j++)
+			xb[i][i] = -1;
+	}
+	vector<double>* values = new vector<double>[num_threads];
+	vector<int>* cols = new vector<int>[num_threads];
+	int* RowIndex = new int[m1.getMatrixSize() + 1] {0};
+	RowIndex[0] = 0;
+
+	int ip = 0;
+#pragma omp parallel shared(xb, x, values, cols, RowIndex, ip) 
+{
+		int current_thread = omp_get_thread_num();
+		#pragma omp for schedule(dynamic) reduction(+: ip)
+			for (int i = 0; i < m1.getMatrixSize(); i++)
+			{
+				int el_row_count = 0;
+				for (int jp = m1.RowIndex()[i]; jp < m1.RowIndex()[i + 1]; jp++)
+				{
+					int j = m1.Col()[jp];
+					for (int kp = m2.RowIndex()[j]; kp < m2.RowIndex()[j + 1]; kp++)
+					{
+						int k = m2.Col()[kp];
+						if (xb[current_thread][k] != i) // фишка которая позволяет не обнулять массив
+						{
+							cols[current_thread].push_back(k);
+							ip = ip + 1;
+							el_row_count++;
+							xb[current_thread][k] = i;
+						}
+						x[current_thread][k] += m1.Values()[jp] * m2.Values()[kp];
+					}
+
+					RowIndex[i+1] = el_row_count;
+					for (int vp = RowIndex[i+1]; vp < ip; vp++)
+					{
+						int v = cols[current_thread][vp];
+						values[current_thread].push_back(x[current_thread][v]);
+					}
+				}
+			}
+	}
+
+	for (int i = 2; i <= m1.getMatrixSize(); i++)
+	{
+		RowIndex[i] += RowIndex[i - 1];
+	}
+	*res = new MatrixCRS(m1.getMatrixSize(), ip);
+	
+	int count = 0;
+	for(int i = 0; i < num_threads; i++)
+	{
+		for (int j = 0; j < values[i].size(); j++)
+		{
+			(*res)->Values()[count] = values[i][j];
+			(*res)->Values()[count] = cols[i][j];
+			count++;
+		}
+	}
+
+	for (int i = 0; i < m1.getMatrixSize(); i++)
+	{
+		(*res)->RowIndex()[i] = RowIndex[i];
+	}
+}
+
+void Calc::mult_parallel_from_d(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
+{
+	int* RowIndex = new int[m1.getMatrixSize() + 1] {0};
+	double* tmp = new double[m1.getMatrixSize() * m2.getMatrixSize()] {0.0};
+	double** denseM = new double*[m1.getMatrixSize()];
+
+	int el_count = 0;
+
+	for (int i = 0; i < m1.getMatrixSize(); i++)
+	{
+		denseM[i] = tmp + (i * m1.getMatrixSize());
+	}
+	
+	mult(m1, m2, denseM);
+
+	//std::cout << el_count << endl;
+#pragma omp parallel for reduction(+: el_count)
+	for (int i = 0; i < m1.getMatrixSize(); i++)
+	{
+		for (int j = 0; j < m1.getMatrixSize(); j++)
+		{
+			if (denseM[i][j] != 0.0)
+				el_count++;
+		}
+	}
+
+	*(res) = new MatrixCRS(m1.getMatrixSize(), el_count);
+
+	el_count = 0;
+	for (int i = 0; i < m1.getMatrixSize(); i++)
+	{
+		for (int j = 0; j < m1.getMatrixSize(); j++)
+		{
+			if (denseM[i][j] != 0.0)
+			{
+				(*res)->Values()[el_count] = denseM[i][j];
+				(*res)->Col()[el_count] = j;
+			}
+		}
+		(*res)->RowIndex()[i+1] = el_count;
+	}
+}
+
+////дописать
+//void Calc::mult(Ellpack& m1, Ellpack& m2, double** denseM)
+//{
+//	int el_in_row;
+//	int matrixSize;
+//	for (int i = 0; i < matrixSize; i++)
+//	{
+//		for (int j = 0; j < el_in_row; j++)
+//		{
+//			for (int k = 0; k < el_in_row; k++)
+//			{
+//				denseM[i][m2.getCol()[m1.getCol()[i][j]][k]] += m1.getValue()[i][j] * m2.getValue()[m1.getCol()[i][j]][k];
+//			}
+//		}
+//	}
+//}
+

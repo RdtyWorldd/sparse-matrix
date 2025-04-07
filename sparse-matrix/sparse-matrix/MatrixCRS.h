@@ -14,6 +14,7 @@ class MatrixCRS
 public:
   MatrixCRS(int _matrixSize, int el_count);
   MatrixCRS(const MatrixCRS& matrix);
+
   ~MatrixCRS();
   MatrixCRS& operator= (const MatrixCRS& matrix);
 
