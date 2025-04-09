@@ -221,30 +221,33 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 {
 	int num_threads = omp_get_max_threads();
-
-	int** xb = new int* [num_threads];
-	double** x = new double* [num_threads];
-
-	for (int i = 0; i < num_threads; i++)
-	{
-		xb[i] = new int[m2.getMatrixSize()];
-		x[i] = new double[m2.getMatrixSize()] {0.0};
-	}
-	for (int i = 0; i < num_threads; i++)
-	{
-		for (int j = 0; j < m2.getMatrixSize(); j++)
-			xb[i][i] = -1;
-	}
-	vector<double>* values = new vector<double>[num_threads];
-	vector<int>* cols = new vector<int>[num_threads];
+	
+	vector<vector<int> > xb;
+	vector<vector<int> > x;
+	vector<vector<double> > values;
+	vector<vector<int> > cols;
 	int* RowIndex = new int[m1.getMatrixSize() + 1] {0};
-	RowIndex[0] = 0;
 
-	int ip = 0;
-#pragma omp parallel shared(xb, x, values, cols, RowIndex, ip) 
+	for (int i = 0; i < num_threads; i++)
+	{
+		x.push_back(vector<int>());
+		xb.push_back(vector<int>());
+		values.push_back(vector <double>());
+		cols.push_back(vector<int>());
+		for (int j = 0; j < m2.getMatrixSize(); j++)
+		{
+			x[i].push_back(0);
+			xb[i].push_back(- 1);
+		}
+	}
+
+
+	RowIndex[0] = 0;
+#pragma omp parallel shared(xb, x, values, cols, RowIndex) 
 {
+		int ip = 0; //added elements by one thread 
 		int current_thread = omp_get_thread_num();
-		#pragma omp for schedule(dynamic) reduction(+: ip)
+		#pragma omp for schedule(static)
 			for (int i = 0; i < m1.getMatrixSize(); i++)
 			{
 				int el_row_count = 0;
@@ -257,20 +260,24 @@ void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 						if (xb[current_thread][k] != i) // фишка которая позволяет не обнулять массив
 						{
 							cols[current_thread].push_back(k);
-							ip = ip + 1;
 							el_row_count++;
 							xb[current_thread][k] = i;
+							x[current_thread][k] = m1.Values()[jp] * m2.Values()[kp];
 						}
-						x[current_thread][k] += m1.Values()[jp] * m2.Values()[kp];
+						else
+						{
+							x[current_thread][k] += m1.Values()[jp] * m2.Values()[kp];
+						}
 					}
-
-					RowIndex[i+1] = el_row_count;
-					for (int vp = RowIndex[i+1]; vp < ip; vp++)
+				}
+					RowIndex[i + 1] = el_row_count;
+					for (int vp = ip; vp < ip + el_row_count; vp++)
 					{
 						int v = cols[current_thread][vp];
 						values[current_thread].push_back(x[current_thread][v]);
 					}
-				}
+					ip = ip + el_row_count;
+				
 			}
 	}
 
@@ -278,23 +285,24 @@ void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 	{
 		RowIndex[i] += RowIndex[i - 1];
 	}
-	*res = new MatrixCRS(m1.getMatrixSize(), ip);
-	
-	int count = 0;
-	for(int i = 0; i < num_threads; i++)
-	{
-		for (int j = 0; j < values[i].size(); j++)
-		{
-			(*res)->Values()[count] = values[i][j];
-			(*res)->Values()[count] = cols[i][j];
-			count++;
-		}
-	}
+	int s = 0;
+	//*res = new MatrixCRS(m1.getMatrixSize(), ip);
+	//
+	//int count = 0;
+	//for(int i = 0; i < num_threads; i++)
+	//{
+	//	for (int j = 0; j < values[i].size(); j++)
+	//	{
+	//		(*res)->Values()[count] = values[i][j];
+	//		(*res)->Values()[count] = cols[i][j];
+	//		count++;
+	//	}
+	//}
 
-	for (int i = 0; i < m1.getMatrixSize(); i++)
-	{
-		(*res)->RowIndex()[i] = RowIndex[i];
-	}
+	//for (int i = 0; i < m1.getMatrixSize(); i++)
+	//{
+	//	(*res)->RowIndex()[i] = RowIndex[i];
+	//}
 }
 
 void Calc::mult_parallel_from_d(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
