@@ -18,12 +18,27 @@ public:
   ~MatrixCRS();
   MatrixCRS& operator= (const MatrixCRS& matrix);
 
-  int getMatrixSize() const;
-  int getElCount() const;
+  int getMatrixSize() const
+  {
+    return matrixSize;
+  }
+  int getElCount() const
+  {
+    return elCount;
+  }
 
-  double* Values() const;
-  int* RowIndex() const;
-  int* Col() const;
+  double* const Values() const
+  {
+    return values;
+  }
+  int* const RowIndex() const
+  {
+    return rowIndex;
+  }
+  int* const Col() const
+  {
+    return col;
+  }
 
   friend ostream& operator << (ostream& out, const MatrixCRS& matrix);
   friend istream& operator >> (istream& in, MatrixCRS& matrix);

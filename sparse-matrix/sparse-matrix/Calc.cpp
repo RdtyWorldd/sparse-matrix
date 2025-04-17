@@ -220,66 +220,80 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 
 void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 {
+	omp_set_num_threads(16);
 	int num_threads = omp_get_max_threads();
 	
-	vector<vector<int> > xb;
-	vector<vector<int> > x;
-	vector<vector<double> > values;
-	vector<vector<int> > cols;
+	//vector<vector<int> > xb(num_threads);
+	//vector<vector<int> > x(num_threads);
+	vector<vector<double> > values(num_threads);
+	vector<vector<int> > cols(num_threads);
+	int* xbarray = new int[num_threads*m2.getMatrixSize()];
+	int** xb = new int*[num_threads];
+	int* xarray = new int[num_threads * m2.getMatrixSize()];
+	int** x = new int* [num_threads];
+
 	int* RowIndex = new int[m1.getMatrixSize() + 1] {0};
-
-	for (int i = 0; i < num_threads; i++)
-	{
-		x.push_back(vector<int>());
-		xb.push_back(vector<int>());
-		values.push_back(vector <double>());
-		cols.push_back(vector<int>());
-		for (int j = 0; j < m2.getMatrixSize(); j++)
-		{
-			x[i].push_back(0);
-			xb[i].push_back(- 1);
-		}
-	}
-
-
 	RowIndex[0] = 0;
 #pragma omp parallel shared(xb, x, values, cols, RowIndex) 
 {
-		int ip = 0; //added elements by one thread 
-		int current_thread = omp_get_thread_num();
-		#pragma omp for schedule(static)
-			for (int i = 0; i < m1.getMatrixSize(); i++)
-			{
-				int el_row_count = 0;
-				for (int jp = m1.RowIndex()[i]; jp < m1.RowIndex()[i + 1]; jp++)
-				{
-					int j = m1.Col()[jp];
-					for (int kp = m2.RowIndex()[j]; kp < m2.RowIndex()[j + 1]; kp++)
-					{
-						int k = m2.Col()[kp];
-						if (xb[current_thread][k] != i) // фишка которая позволяет не обнулять массив
-						{
-							cols[current_thread].push_back(k);
-							el_row_count++;
-							xb[current_thread][k] = i;
-							x[current_thread][k] = m1.Values()[jp] * m2.Values()[kp];
-						}
-						else
-						{
-							x[current_thread][k] += m1.Values()[jp] * m2.Values()[kp];
-						}
-					}
-				}
-					RowIndex[i + 1] = el_row_count;
-					for (int vp = ip; vp < ip + el_row_count; vp++)
-					{
-						int v = cols[current_thread][vp];
-						values[current_thread].push_back(x[current_thread][v]);
-					}
-					ip = ip + el_row_count;
-				
-			}
+
+	int ip = 0; //added elements by one thread 
+	int current_thread = omp_get_thread_num();
+	//x[current_thread] = vector<int>(m2.getMatrixSize()); //время увеличилось относительно коммита
+	//xb[current_thread] = vector<int>(m2.getMatrixSize());
+
+	const int m1_size = m1.getMatrixSize();
+	const int m2_size = m2.getMatrixSize();
+
+	values[current_thread].reserve(8);
+	cols[current_thread].reserve(8);
+
+	values[current_thread].resize(0);
+	cols[current_thread].resize(0);
+	//x[i] = vector<int>(m2.getMatrixSize());
+	x[current_thread] = xarray + current_thread * m2_size;
+	//xb[i] = vector<int>(m2.getMatrixSize());
+	xb[current_thread] = xbarray + current_thread * m2_size;
+
+	for (int i = 0; i < m2_size; i++)
+	{
+		x[current_thread][i] = 0;
+		xb[current_thread][i] = -1;
 	}
+	
+	#pragma omp for schedule(static)
+	for (int i = 0; i < m1_size; i++)
+	{
+		int el_row_count = 0;
+		for (int jp = m1.RowIndex()[i]; jp < m1.RowIndex()[i + 1]; jp++)
+		{
+			int j = m1.Col()[jp];
+			for (int kp = m2.RowIndex()[j]; kp < m2.RowIndex()[j + 1]; kp++)
+			{
+				int k = m2.Col()[kp];
+				if (xb[current_thread][k] != i) // фишка которая позволяет не обнулять массив
+				{
+					cols[current_thread].push_back(k);
+					el_row_count++;
+					xb[current_thread][k] = i;
+					x[current_thread][k] = m1.Values()[jp] * m2.Values()[kp];
+				}
+				else
+				{
+					x[current_thread][k] += m1.Values()[jp] * m2.Values()[kp];
+				}
+			}
+		}
+		
+		RowIndex[i + 1] = el_row_count;
+		for (int vp = ip; vp < ip + el_row_count; vp++)
+		{
+			int v = cols[current_thread][vp];
+			values[current_thread].push_back(x[current_thread][v]);
+		}
+		ip = ip + el_row_count;	
+	}
+}
 
 	for (int i = 2; i <= m1.getMatrixSize(); i++)
 	{
@@ -303,6 +317,11 @@ void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 	//{
 	//	(*res)->RowIndex()[i] = RowIndex[i];
 	//}
+
+	delete[] xb;
+	delete[] xbarray;
+	delete[] x;
+	delete[] xarray;
 }
 
 void Calc::mult_parallel_from_d(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)

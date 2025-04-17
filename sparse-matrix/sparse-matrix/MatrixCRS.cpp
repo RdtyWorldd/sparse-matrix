@@ -60,30 +60,30 @@ MatrixCRS& MatrixCRS::operator=(const MatrixCRS& matrix)
   return *this;
 }
 
-int MatrixCRS::getMatrixSize() const
-{
-  return matrixSize;
-}
-
-int MatrixCRS::getElCount() const
-{
-  return elCount;
-}
-
-double* MatrixCRS::Values() const
-{
-  return values;
-}
-
-int* MatrixCRS::RowIndex() const
-{
-  return rowIndex;
-}
-
-int* MatrixCRS::Col() const
-{
-  return col;
-}
+//int MatrixCRS::getMatrixSize() const
+//{
+//  return matrixSize;
+//}
+//
+//int MatrixCRS::getElCount() const
+//{
+//  return elCount;
+//}
+//
+//double* MatrixCRS::Values() const
+//{
+//  return values;
+//}
+//
+//int* MatrixCRS::RowIndex() const
+//{
+//  return rowIndex;
+//}
+//
+//int* MatrixCRS::Col() const
+//{
+//  return col;
+//}
 
 ostream& operator<<(ostream& out, const MatrixCRS& matrix)
 {
