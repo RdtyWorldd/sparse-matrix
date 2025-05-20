@@ -28,6 +28,15 @@ MatrixCRS::MatrixCRS(const MatrixCRS& matrix)
     rowIndex[i] = matrix.rowIndex[i];
 }
 
+MatrixCRS::MatrixCRS(int _matrixSize, int*& _rowIndex)
+{
+  matrixSize = _matrixSize;
+  rowIndex = _rowIndex;
+  elCount = rowIndex[_matrixSize];
+  values = new double[elCount] {0.0};
+  col = new int[elCount] {0};
+}
+
 
 MatrixCRS::~MatrixCRS()
 {

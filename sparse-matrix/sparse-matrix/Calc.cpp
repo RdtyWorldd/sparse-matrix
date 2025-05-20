@@ -48,46 +48,55 @@ void Calc::mult(MatrixCOO& m1, MatrixCOO& m2, double** denseM)
 
 void Calc::multSort(MatrixCOO& m1, MatrixCOO& m2, double** denseM)
 {
-  int m2_size = m2.getMatrixSize();
-  int* rowIndexM2 = new int[m2_size + 1];
-  int* elInRow = new int[m2_size];
+  int m_size = m1.getMatrixSize();
+	int* rowIndexM1 = new int[m_size + 1];
+  int* rowIndexM2 = new int[m_size + 1];
 
-  for (int i = 0; i < m2_size; i++)
+  for (int i = 0; i < m_size + 1; i++)
   {
-	rowIndexM2[i] = 0;
-	elInRow[i] = 0;
+		rowIndexM1[i] = 0;
+		rowIndexM2[i] = 0;
   }
-  rowIndexM2[m2_size] = 0;
 
-  for (int i = 0; i < m2.getElCount(); i++)
-	elInRow[m2.Row()[i]]++;
-
-  for (int i = 1; i < m2_size + 1; i++)
-	rowIndexM2[i] = rowIndexM2[i - 1] + elInRow[i - 1];
-
-  for (int i = 0; i < m1.getElCount(); i++)
-  {
-	int col = m1.Col()[i];
-	int row = m1.Row()[i];
-
-	int j1 = rowIndexM2[col]; int j2 = rowIndexM2[col + 1];
-	for (int j = j1; j < j2; j++)
+	for (int i = 0; i < m1.getElCount(); i++)
 	{
-	  denseM[row][m2.Col()[j]] += m1.Values()[i] * m2.Values()[j];
+		rowIndexM1[m1.Row()[i] + 1]++;
 	}
-  }
-  delete[] rowIndexM2;
-  delete[] elInRow;
+
+	for (int i = 0; i < m2.getElCount(); i++)
+	{
+		rowIndexM2[m2.Row()[i] + 1]++;
+	}
+
+	for (int i = 2; i < m_size + 1; i++)
+	{
+		rowIndexM1[i] = rowIndexM1[i] + rowIndexM1[i - 1];
+		rowIndexM2[i] = rowIndexM2[i] + rowIndexM2[i - 1];
+	}
+	
+#pragma omp parallel for
+	for (int i = 0; i < m_size; i++) {
+		int j1 = rowIndexM1[i]; int j2 = rowIndexM1[i + 1];
+		int row = i;
+		for (int j = j1; j < j2; j++) {
+			int col = m1.Col()[j];
+			int k1 = rowIndexM2[col]; int k2 = rowIndexM2[col + 1];
+			for (int k = k1; k < k2; k++)
+				denseM[row][m2.Col()[k]] += m1.Values()[j] * m2.Values()[k];
+		}
+	}
+	delete[] rowIndexM1;
+	delete[] rowIndexM2;
 }
 
 void Calc::transposition(MatrixCRS& matrix, MatrixCRS& matrixT)
 {
   for (int i = 0; i < matrix.getElCount(); i++)
-	matrixT.RowIndex()[matrix.Col()[i] + 1]++;
+		matrixT.RowIndex()[matrix.Col()[i] + 1]++;
   for (int i = 1; i < matrix.getMatrixSize(); i++)
-	matrixT.RowIndex()[i] += matrixT.RowIndex()[i - 1];
+		matrixT.RowIndex()[i] += matrixT.RowIndex()[i - 1];
   for(int i = matrix.getMatrixSize(); i > 0; i--)
-	matrixT.RowIndex()[i] = matrixT.RowIndex()[i - 1];
+		matrixT.RowIndex()[i] = matrixT.RowIndex()[i - 1];
 
   for (int i = 0; i < matrix.getMatrixSize(); i++)
   {
@@ -220,7 +229,7 @@ void Calc::mult(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 
 void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 {
-	omp_set_num_threads(16);
+	//omp_set_num_threads(16);
 	int num_threads = omp_get_max_threads();
 	
 	//vector<vector<int> > xb(num_threads);
@@ -300,23 +309,28 @@ void Calc::mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res)
 		RowIndex[i] += RowIndex[i - 1];
 	}
 	int s = 0;
-	//*res = new MatrixCRS(m1.getMatrixSize(), ip);
-	//
-	//int count = 0;
-	//for(int i = 0; i < num_threads; i++)
-	//{
-	//	for (int j = 0; j < values[i].size(); j++)
-	//	{
-	//		(*res)->Values()[count] = values[i][j];
-	//		(*res)->Values()[count] = cols[i][j];
-	//		count++;
-	//	}
-	//}
 
-	//for (int i = 0; i < m1.getMatrixSize(); i++)
-	//{
-	//	(*res)->RowIndex()[i] = RowIndex[i];
-	//}
+	*res = new MatrixCRS(m1.getMatrixSize(), RowIndex);
+	
+	vector<int> sizes;
+	sizes.reserve(num_threads+1);
+	sizes.push_back(0);
+	for (int i = 0; i < num_threads; i++)
+	{
+		sizes.push_back(values[i].size());
+	}
+
+#pragma omp parallel shared(sizes, values, res, cols)
+	{
+		int num_thread = omp_get_thread_num();
+		int count = 0;
+		for (int i = sizes[num_thread]; i < sizes[num_thread+1]; i++)
+		{
+			(*res)->Values()[i] = values[num_thread][count];
+			(*res)->Col()[i] = cols[num_thread][count];
+			count++;
+		}
+	}
 
 	delete[] xb;
 	delete[] xbarray;

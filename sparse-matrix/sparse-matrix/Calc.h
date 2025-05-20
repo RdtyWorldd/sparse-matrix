@@ -1,7 +1,7 @@
 #pragma once
 #include "MatrixCOO.h"
 #include "MatrixCRS.h"
-#include "Ellpack.h"
+//#include "Ellpack.h"
 #include <vector>
 #include <omp.h>
 
@@ -32,5 +32,5 @@ public:
   void mult_parallel_from_d(MatrixCRS& m1, MatrixCRS& m2,MatrixCRS** res);
   void mult_parallel_from_v(MatrixCRS& m1, MatrixCRS& m2, MatrixCRS** res);
   //Ellpack
-  void mult(Ellpack& m1, Ellpack& m2, double** denseM);
+ // void mult(Ellpack& m1, Ellpack& m2, double** denseM);
 };
